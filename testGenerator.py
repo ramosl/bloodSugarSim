@@ -1,7 +1,7 @@
 import random
 
 hourLimit = 10
-foodTypes = 123
+foodTypes = 112
 exerTypes = 6
 
 
