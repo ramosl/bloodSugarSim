@@ -5,59 +5,73 @@ import matplotlib.pyplot as plt
 #Time will do in minutes
 #Currently receive food by ID number
 
-#food does not currently match index as there are holes in the document provided
 
-#Get contents from files. Currently just uses the index of food
-#rather than name.
-def getContents(filename, col):
+"""
+Questions to ask:
+Am i allowed to fix input the way I did
+
+"""
+
+STARTING_BLOOD_SUGAR = 80
+GLYCATION_LEVEL = 150
+
+def getContents(filename):
+	csvfile = open(filename, "rb")
+	datareader = csv.reader(csvfile)
+
+	contentList = {}
+	for row in datareader:
+		for col in range(0, 2):
+			if row[col].isdigit():
+				contentList[int(row[col])] = int(row[2])
+			else:
+				contentList[row[col]] = int(row[2])
+
+	return contentList
+
+def getTestSet(filename):
 	csvfile = open(filename, "rb")
 	datareader = csv.reader(csvfile)
 	contentList = []
 	for row in datareader:
-		if col == -1:
-			newRow = []
-			for elem in row:
-				if elem.isdigit():
-					newRow.append(int(elem))
-				else:
-					newRow.append(elem)
-			# print newRow
-			contentList.append(newRow)
-		else:
-			if row[col].isdigit():
-				contentList.append(int(row[col]))
+		newRow = []
+		for elem in row:
+			if elem.isdigit():
+				newRow.append(int(elem))
 			else:
-				contentList.append(row[col])
+				newRow.append(elem)
+		contentList.append(newRow)
 
 	return contentList
 
 			
 
 def bloodSugarSim(inputList):
-	#sort inputList by time
-	# print inputList
-	exerList = getContents("Exercise.csv", 2)
-	foodList = getContents("FoodDB.csv", 2)
+	exerList = getContents("Exercise.csv")
+	foodList = getContents("FoodDB.csv")
 
-	# print exerList
-
-	# print len(foodList)
-	# print foodList
-
+	#Sort the input list based on the time inputted.
 	inputList = sorted(inputList,key=lambda x: x[2])
-	# print inputList
 
-	#Start with Blood Sugar
-
+	#Dictionary of tmimes in the graph
 	timesList = {0:0}
 
+	"""
+	First created a dictionary of all the times that would create kink points, 
+	when the slope would change in the graph. Contains when eating/exercising
+	would start changing a person's blood sugar and when it would stop.
+	"""
 	for elem in inputList:
 		timesList[elem[2]] = 0.0
-		if elem[0] == 'f': timesList[elem[2] + 120] = 0.0 #timesList.append(elem[2] + 120)
+		if elem[0] == 'f': timesList[elem[2] + 120] = 0.0
 		else: end = timesList[elem[2] + 60] = 0.0
 
 	# timesList.sort()
 
+	"""
+	Using the dictionary of times that was created previously, now calculate the
+	corresponding slope in each of those sections.
+	"""
 	for index, elem in enumerate(inputList):
 		timeMod = 60
 		if elem[0] == 'f': timeMod = 120
@@ -65,109 +79,81 @@ def bloodSugarSim(inputList):
 		for timeElem in timesList:
 			if timeElem >= elem[2] and timeElem < elem[2] + timeMod:
 				if elem[0] == 'f': 
-					# print elem[1]
 					timesList[timeElem] += (foodList[elem[1]] * 1.0) / 120
-					if timeElem == 16:
-						print (foodList[elem[1]] * 1.0) / 120
 				else: 
 					timesList[timeElem] -= (exerList[elem[1]] * 1.0) / 60
-					if timeElem == 16:
-						print elem[1]
-						print exerList[elem[1]]
-						print (exerList[elem[1]] * 1.0) / 60
 
-		# end = 0
-	# print timesList
-		# if elem[0] == 'f': end = elem[2] + 120
-		# else: end = elem[2] + 60
+	#Create a list that has all keys sorted to traverse the timesList in chronological order.
+	sortedKeys = sorted(timesList.keys())
 
+	#Final set of points to output to graph
 	pointList = []
 
-	sortedKeys = sorted(timesList.keys())#.sort() #List of all the times
-	# print sortedKeys
-	# sortedKeys = sorted(sortedKeys)
-	# print sortedKeys
-
-	# print timesList
-
-	bloodSugar = 80.0
+	bloodSugar = STARTING_BLOOD_SUGAR
 	glycation = False
 	glyCount = 0
 
-	#Always trying to calculate where the point is in curTime
+	#Loop through all elements in the list of times.
 	for index, curTime in enumerate(sortedKeys):
 		normalizationTime = -1
 
 		if index != 0 and timesList[sortedKeys[index - 1]] != 0:
 			bloodSugar += (curTime - sortedKeys[index - 1]) * timesList[sortedKeys[index - 1]]
 		elif timesList[sortedKeys[index - 1]] == 0:
-			if bloodSugar > 80:
-				if bloodSugar - 80 < curTime - sortedKeys[index - 1]:
-					normalizationTime = sortedKeys[index - 1] + bloodSugar - 80
-					pointList.append((normalizationTime, 80))
+			if bloodSugar > STARTING_BLOOD_SUGAR:
+				"""
+				If nothing is happening, then the person begins normalizing back to starting blood
+				sugar. Thus, this would be done by creating another point in the output later on.
+				"""
+				if bloodSugar - STARTING_BLOOD_SUGAR < curTime - sortedKeys[index - 1]:
+					normalizationTime = sortedKeys[index - 1] + bloodSugar - STARTING_BLOOD_SUGAR
+					pointList.append((normalizationTime, STARTING_BLOOD_SUGAR))
 					
-
 				bloodSugar += (curTime - sortedKeys[index - 1]) * -1
-				if bloodSugar < 80:
-					bloodSugar = 80
+				if bloodSugar < STARTING_BLOOD_SUGAR:
+					bloodSugar = STARTING_BLOOD_SUGAR
 
-
-
-		if not glycation and bloodSugar >= 150:
+		"""
+		To track glycation, whenever the blood sugar level would go above 150, the program would
+		then find the intersect of that line with the current segment. It would then add that amount
+		to the total glycation count.
+		"""
+		if not glycation and bloodSugar >= GLYCATION_LEVEL:
 			glycation = True
-			b = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
-			glyStart = (150.0 - b) / timesList[sortedKeys[index - 1]]
-
+			yInt = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
+			glyStart = ((GLYCATION_LEVEL - yInt) * 1.0) / timesList[sortedKeys[index - 1]]
 			glyCount += curTime - glyStart
-
-			# print "start time = ", sortedKeys[index - 1]
-			# print "glystrt = ", glyStart
-			# print "Cur glycount", glyCount
-		elif glycation and bloodSugar < 150:
+		elif glycation and bloodSugar < GLYCATION_LEVEL:
 			glycation = False
+			yInt, glyEnd = 0, 0
 
-			b = 0
-			glyEnd = 0
-
-			# b = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
 			if timesList[sortedKeys[index - 1]] == 0:
 				if normalizationTime != -1:
-					b = bloodSugar - normalizationTime * -1
-					glyEnd = (150.0 - b) / -1
+					yInt = bloodSugar - normalizationTime * -1
+					glyEnd = ((GLYCATION_LEVEL - yInt) * 1.0) / -1
 				else:
-					b = bloodSugar - curTime * -1
-					glyEnd = (150.0 - b) / -1
+					yInt = bloodSugar - curTime * -1
+					glyEnd = ((GLYCATION_LEVEL - yInt) * 1.0) / -1
 			else:
-				b = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
-				glyEnd = (150.0 - b) / timesList[sortedKeys[index - 1]]
-
-			# print "cur blood", bloodSugar
-			# print "time", curTime
-			# print "last time = ", sortedKeys[index - 1]
-			# print "glyend = ", glyEnd 
-			
+				yInt = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
+				glyEnd = ((GLYCATION_LEVEL - yInt) * 1.0) / timesList[sortedKeys[index - 1]]
 
 			glyCount += glyEnd - sortedKeys[index - 1]
-			# print "Cur glycount", glyCount
-		elif glycation == True and bloodSugar > 150:
+		elif glycation == True and bloodSugar > GLYCATION_LEVEL:
 			glyCount += curTime - sortedKeys[index - 1]
-			# print "Cur glycount", glyCount
 
-
+		#Add the final point to the list of points for the graph
 		pointList.append((curTime, bloodSugar))
 
-		# print curTime, timesList[index]
-	# print pointList
-	print "Glycation is", glyCount
+	print "Glycation level is", glyCount
 
+
+	#Plotting the graph
 	xAxis = []
 	yAxis = []
 	for elem in pointList:
 		xAxis.append(elem[0])
 		yAxis.append(elem[1])
-
-	# print xAxis
-	# print yAxis
 
 	plt.plot(xAxis, yAxis)
 	plt.xlabel('Time (Minutes)')
@@ -175,11 +161,8 @@ def bloodSugarSim(inputList):
 	plt.title("Change in Blood Sugar over Time")
 	plt.show()
 
-testSet = getContents("test4.csv", -1)
 
+
+#Code to run the Blood Sugar Simulator
+testSet = getTestSet("test.csv")
 bloodSugarSim(testSet)
-
-
-
-# print exerList
-# print foodList
