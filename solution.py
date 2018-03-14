@@ -8,13 +8,18 @@ import matplotlib.pyplot as plt
 
 """
 Questions to ask:
-Am i allowed to fix input the way I did
+Am i allowed to fix input the way I did, or how much flexitiblity am i allowed
+- Currently do buy index and by exact name of food
 
+End of graph:
+- when it reaches 80?
 """
 
+# Starting constants based on the specification
 STARTING_BLOOD_SUGAR = 80
 GLYCATION_LEVEL = 150
 
+#Method to extract food/exercise info from csv files
 def getContents(filename):
 	csvfile = open(filename, "rb")
 	datareader = csv.reader(csvfile)
@@ -29,6 +34,7 @@ def getContents(filename):
 
 	return contentList
 
+#Method to extract test set info from csv files
 def getTestSet(filename):
 	csvfile = open(filename, "rb")
 	datareader = csv.reader(csvfile)
@@ -45,13 +51,19 @@ def getTestSet(filename):
 	return contentList
 
 			
-
+"""
+Method to run the simulation. Accepts a list of properly formatted inputs,
+including the item's index/name and whether it is a food or exercise, and
+figures out how to plot the points in a blood sugar simulation graph and
+plots it. Also prints out the final value of glycation.
+"""
 def bloodSugarSim(inputList):
 	exerList = getContents("Exercise.csv")
 	foodList = getContents("FoodDB.csv")
 
 	#Sort the input list based on the time inputted.
 	inputList = sorted(inputList,key=lambda x: x[2])
+	print inputList
 
 	#Dictionary of tmimes in the graph
 	timesList = {0:0}
@@ -142,13 +154,18 @@ def bloodSugarSim(inputList):
 		elif glycation == True and bloodSugar > GLYCATION_LEVEL:
 			glyCount += curTime - sortedKeys[index - 1]
 
-		#Add the final point to the list of points for the graph
+		#Add the point to the list of points for the graph
 		pointList.append((curTime, bloodSugar))
+
+	#Add one final point so that a person's blood level normalizes to the starting level
+	if bloodSugar > STARTING_BLOOD_SUGAR:
+		normalizationTime = sortedKeys[len(sortedKeys) - 1] + bloodSugar - STARTING_BLOOD_SUGAR
+		pointList.append((normalizationTime, STARTING_BLOOD_SUGAR))
 
 	print "Glycation level is", glyCount
 
 
-	#Plotting the graph
+	#Plotting the graph using pyplot
 	xAxis = []
 	yAxis = []
 	for elem in pointList:
@@ -164,5 +181,5 @@ def bloodSugarSim(inputList):
 
 
 #Code to run the Blood Sugar Simulator
-testSet = getTestSet("test.csv")
+testSet = getTestSet("test5.csv")
 bloodSugarSim(testSet)

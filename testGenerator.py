@@ -1,10 +1,11 @@
+"""
+Code to generate random test sets for the solution to use.
+"""
 import random
 
 hourLimit = 10
 foodTypes = 112
 exerTypes = 6
-
-
 
 for i in range(0, 10):
 	curStr = ""
