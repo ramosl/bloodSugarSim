@@ -11,8 +11,8 @@ Questions to ask:
 Am i allowed to fix input the way I did, or how much flexitiblity am i allowed
 - Currently do buy index and by exact name of food
 
-End of graph:
-- when it reaches 80?
+# GRAPH FOR GLYCATION
+
 """
 
 # Starting constants based on the specification
@@ -31,7 +31,6 @@ def getContents(filename):
 				contentList[int(row[col])] = int(row[2])
 			else:
 				contentList[row[col]] = int(row[2])
-
 	return contentList
 
 #Method to extract test set info from csv files
@@ -65,7 +64,7 @@ def bloodSugarSim(inputList):
 	inputList = sorted(inputList,key=lambda x: x[2])
 	print inputList
 
-	#Dictionary of tmimes in the graph
+	#Dictionary of times in the graph
 	timesList = {0:0}
 
 	"""
@@ -100,6 +99,7 @@ def bloodSugarSim(inputList):
 
 	#Final set of points to output to graph
 	pointList = []
+	glyPointList = [(0,0)]
 
 	bloodSugar = STARTING_BLOOD_SUGAR
 	glycation = False
@@ -131,10 +131,16 @@ def bloodSugarSim(inputList):
 		to the total glycation count.
 		"""
 		if not glycation and bloodSugar >= GLYCATION_LEVEL:
+			
+
 			glycation = True
 			yInt = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
 			glyStart = ((GLYCATION_LEVEL - yInt) * 1.0) / timesList[sortedKeys[index - 1]]
+			
+			glyPointList.append((glyStart, glyCount))
 			glyCount += curTime - glyStart
+			glyPointList.append((curTime, glyCount))
+
 		elif glycation and bloodSugar < GLYCATION_LEVEL:
 			glycation = False
 			yInt, glyEnd = 0, 0
@@ -150,17 +156,46 @@ def bloodSugarSim(inputList):
 				yInt = bloodSugar - curTime * timesList[sortedKeys[index - 1]]
 				glyEnd = ((GLYCATION_LEVEL - yInt) * 1.0) / timesList[sortedKeys[index - 1]]
 
+			
+
+			# glyPointList.append((glyEnd, glyCount))
+
+			glyPointList.append((sortedKeys[index - 1], glyCount))
 			glyCount += glyEnd - sortedKeys[index - 1]
+			glyPointList.append((glyEnd, glyCount))
+
 		elif glycation == True and bloodSugar > GLYCATION_LEVEL:
+			# glyCount += curTime - sortedKeys[index - 1]
+			# glyPointList.append((curTime, glyCount))
+
+			glyPointList.append((sortedKeys[index - 1], glyCount))
 			glyCount += curTime - sortedKeys[index - 1]
+			glyPointList.append((curTime, glyCount))
 
 		#Add the point to the list of points for the graph
 		pointList.append((curTime, bloodSugar))
 
 	#Add one final point so that a person's blood level normalizes to the starting level
+	# print glycation
+	# print bloodSugar
+	normalizationTime = sortedKeys[len(sortedKeys) - 1] + bloodSugar - STARTING_BLOOD_SUGAR
 	if bloodSugar > STARTING_BLOOD_SUGAR:
-		normalizationTime = sortedKeys[len(sortedKeys) - 1] + bloodSugar - STARTING_BLOOD_SUGAR
 		pointList.append((normalizationTime, STARTING_BLOOD_SUGAR))
+		bloodSugar = STARTING_BLOOD_SUGAR
+	if glycation and bloodSugar < GLYCATION_LEVEL:
+		yInt, glyEnd = 0, 0
+
+		curTime = sortedKeys[len(sortedKeys) - 1]
+
+		yInt = bloodSugar - normalizationTime * -1
+		glyEnd = ((GLYCATION_LEVEL - yInt) * 1.0) / -1
+
+		glyPointList.append((curTime, glyCount))
+		glyCount += glyEnd - curTime
+		glyPointList.append((glyEnd, glyCount))
+	glyPointList.append((normalizationTime, glyCount))
+
+
 
 	print "Glycation level is", glyCount
 
@@ -178,8 +213,20 @@ def bloodSugarSim(inputList):
 	plt.title("Change in Blood Sugar over Time")
 	plt.show()
 
+	xAxis2 = []
+	yAxis2 = []
+	for elem in glyPointList:
+		xAxis2.append(elem[0])
+		yAxis2.append(elem[1])
+
+	plt.plot(xAxis2, yAxis2)
+	plt.xlabel('Time (Minutes)')
+	plt.ylabel('Glycation Level')
+	plt.title("Change in Glycation over Time")
+	plt.show()
+
 
 
 #Code to run the Blood Sugar Simulator
-testSet = getTestSet("test5.csv")
+testSet = getTestSet("test2.csv")
 bloodSugarSim(testSet)
