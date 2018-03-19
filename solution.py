@@ -62,7 +62,7 @@ def bloodSugarSim(inputList):
 
 	#Sort the input list based on the time inputted.
 	inputList = sorted(inputList,key=lambda x: x[2])
-	print inputList
+	# print inputList
 
 	#Dictionary of times in the graph
 	timesList = {0:0}
@@ -228,5 +228,5 @@ def bloodSugarSim(inputList):
 
 
 #Code to run the Blood Sugar Simulator
-testSet = getTestSet("test2.csv")
+testSet = getTestSet("test4.csv")
 bloodSugarSim(testSet)
